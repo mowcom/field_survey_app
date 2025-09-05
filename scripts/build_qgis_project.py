@@ -75,65 +75,45 @@ def build_renderer(layer: QgsVectorLayer) -> QgsCategorizedSymbolRenderer:
 
 
 def apply_value_maps(layer: QgsVectorLayer) -> None:
-    """Configure form widgets with mobile-friendly options and proper defaults"""
+    """Configure simple Yes/No widgets and hide non-editable fields"""
     fields = layer.fields()
-    
+
     def set_value_map(field_name: str, mapping):
         idx = fields.indexOf(field_name)
         if idx == -1:
             return
-        # Configure ValueMap for mobile with radio button style
-        cfg = {
-            "map": [{"value": v, "label": label} for v, label in mapping],
-            "style": "radio"  # Force radio button style for mobile
-        }
+        cfg = {"map": [{"value": v, "label": label} for v, label in mapping], "style": "radio"}
         layer.setEditorWidgetSetup(idx, QgsEditorWidgetSetup("ValueMap", cfg))
-    
+
     def set_read_only(field_name: str):
         idx = fields.indexOf(field_name)
         if idx != -1:
-            # Set field as read-only using the correct API
-            layer.setEditorWidgetSetup(idx, QgsEditorWidgetSetup("TextEdit", {"IsMultiline": False, "UseHtml": False, "IsReadOnly": True}))
-    
-    # Mobile-friendly survey status fields (big buttons)
-    ynu = [(-1, "Unknown"), (0, "No"), (1, "Yes")]
-    set_value_map("found", ynu)
-    set_value_map("exists", ynu)
-    
-    # Leak detection (simplified labels for mobile)
-    set_value_map("small_leak", [(0, "No"), (1, "Yes")])
-    set_value_map("viable_leak", [(0, "No"), (1, "Yes")])
-    
-    # Visited status (system managed, but show for reference)
-    set_value_map("visited", [(0, "Not Visited"), (1, "Visited")])
-    
-    # Read-only context fields for form header
-    set_read_only("well_id")
-    set_read_only("source_list") 
-    set_read_only("well_name")
-    set_read_only("operator_name")
-    set_read_only("well_type")
-    set_read_only("county_name")
-    set_read_only("visited_at_utc")
-    set_read_only("last_edit_utc")
-    
-    # Auto-populated fields with apply-on-update for mobile workflow
-    idx = fields.indexOf("editor_name")
-    if idx != -1:
-        layer.setDefaultValueDefinition(idx, QgsDefaultValue("@user_full_name", True))
-        
-    last_idx = fields.indexOf("last_edit_utc") 
-    if last_idx != -1:
-        # Apply on update = True ensures timestamp updates on every edit
-        layer.setDefaultValueDefinition(last_idx, QgsDefaultValue("now()", True))
-        
-    # Configure visited field with proper defaults
-    visited_idx = fields.indexOf("visited")
-    if visited_idx != -1:
-        # Start as "Not Visited" by default, will be updated by triggers
-        layer.setDefaultValueDefinition(visited_idx, QgsDefaultValue("0", False))
-        
-    print("✅ Form configured with mobile-friendly widgets")
+            layer.setEditorWidgetSetup(idx, QgsEditorWidgetSetup("TextEdit", {"IsReadOnly": True}))
+
+    def set_hidden(field_name: str):
+        idx = fields.indexOf(field_name)
+        if idx != -1:
+            layer.setEditorWidgetSetup(idx, QgsEditorWidgetSetup("Hidden", {}))
+
+    # Editable survey fields: Yes/No only
+    yn = [(0, "No"), (1, "Yes")]
+    set_value_map("exists", yn)
+    set_value_map("small_leak", yn)
+    set_value_map("viable_leak", yn)
+
+    # Hide 'found' (kept for compatibility but not used)
+    set_hidden("found")
+
+    # System fields read-only
+    for f in ("visited", "visited_at_utc", "last_edit_utc"):
+        set_read_only(f)
+
+    # Context (keep read-only; QField form can still show basic ID info)
+    for f in ("well_id", "source_list", "well_name", "operator_name"):
+        set_read_only(f)
+
+    # Ensure no default expressions for audit fields (triggers manage them)
+    print("✅ Widgets: exists/small_leak/viable_leak as Yes/No; others hidden/read-only")
 
 
 def configure_survey_form(layer: QgsVectorLayer) -> None:
@@ -196,48 +176,29 @@ def configure_survey_form(layer: QgsVectorLayer) -> None:
 
 
 def configure_mobile_survey_form(layer: QgsVectorLayer) -> None:
-    """Configure ultra-simple form with basic field ordering and suppression"""
+    """Ultra-simple form: only the three editable fields visible"""
     fields = layer.fields()
     form_config = layer.editFormConfig()
-    
-    # Use simple generated layout - most reliable in QField
     form_config.setLayout(QgsEditFormConfig.GeneratedLayout)
-    
-    # Configure basic widgets for survey fields
-    def set_value_map(field_name: str, mapping):
-        idx = fields.indexOf(field_name)
-        if idx == -1:
-            return
-        cfg = {"map": [{"value": v, "label": label} for v, label in mapping]}
-        layer.setEditorWidgetSetup(idx, QgsEditorWidgetSetup("ValueMap", cfg))
-    
-    def set_read_only(field_name: str):
-        idx = fields.indexOf(field_name)
-        if idx != -1:
-            layer.setEditorWidgetSetup(idx, QgsEditorWidgetSetup("TextEdit", {"IsReadOnly": True}))
 
-    # Survey fields - simplified options
-    ynu = [(-1, "Unknown"), (0, "Not Found"), (1, "Found")]
-    set_value_map("well_status", ynu)  
-    set_value_map("small_leak", [(0, "No"), (1, "Yes")])
-    set_value_map("viable_leak", [(0, "No"), (1, "Yes")])
-    
-    # Context fields read-only
-    context_fields = ["well_id", "source_list", "well_name", "operator_name", "well_type", "county_name"]
-    for field_name in context_fields:
-        set_read_only(field_name)
-    
-    # Auto-populated fields
-    editor_idx = fields.indexOf("editor_name")
-    if editor_idx != -1:
-        layer.setDefaultValueDefinition(editor_idx, QgsDefaultValue("@user_full_name", True))
-        
-    last_edit_idx = fields.indexOf("last_edit_utc")
-    if last_edit_idx != -1:
-        layer.setDefaultValueDefinition(last_edit_idx, QgsDefaultValue("now()", True))
-    
+    # Apply widgets and suppression
+    apply_value_maps(layer)
+
+    # Order: exists, small_leak, viable_leak
+    try:
+        from qgis.core import QgsAttributeEditorContainer, QgsAttributeEditorField
+        root = QgsAttributeEditorContainer("Survey", None)
+        for fname in ("exists", "small_leak", "viable_leak"):
+            idx = fields.indexOf(fname)
+            if idx != -1:
+                root.addChildElement(QgsAttributeEditorField(fname, idx, root))
+        form_config.setInvisibleRootContainer(root)
+    except Exception:
+        # Fallback: rely on generated layout
+        pass
+
     layer.setEditFormConfig(form_config)
-    print("✅ Ultra-simple mobile form configured")
+    print("✅ Form suppression applied: only exists / small_leak / viable_leak shown")
 
 
 def configure_simple_well_form(layer: QgsVectorLayer) -> None:
@@ -328,7 +289,7 @@ def configure_form_layout(layer: QgsVectorLayer) -> None:
 def add_actions(layer: QgsVectorLayer) -> None:
     mgr: QgsActionManager = layer.actions()
     for act in list(mgr.actions()):
-        if act.name() in ("Open in Google Maps", "Share via WhatsApp", "Open in Apple Maps"):
+        if act.name() in ("Open in Google Maps", "Share via WhatsApp", "Open in Apple Maps", "My Location"):
             mgr.removeAction(act)
     mgr.addAction(QgsAction.OpenUrl, "Open in Google Maps",
                   "concat('https://www.google.com/maps/dir/?api=1&destination=', y(transform($geometry, layer_property(@layer,'crs'), 'EPSG:4326')), ',', x(transform($geometry, layer_property(@layer,'crs'), 'EPSG:4326')))", None, False)
@@ -336,6 +297,9 @@ def add_actions(layer: QgsVectorLayer) -> None:
                   "concat('https://wa.me/?text=', url_encode(concat('Well ', \"well_id\", ' — https://maps.google.com/?q=', y(transform($geometry, layer_property(@layer,'crs'), 'EPSG:4326')), ',', x(transform($geometry, layer_property(@layer,'crs'), 'EPSG:4326')))))", None, False)
     mgr.addAction(QgsAction.OpenUrl, "Open in Apple Maps",
                   "concat('http://maps.apple.com/?daddr=', y(transform($geometry, layer_property(@layer,'crs'), 'EPSG:4326')), ',', x(transform($geometry, layer_property(@layer,'crs'), 'EPSG:4326')))", None, False)
+    # Optional quick access to user's current location in Maps
+    mgr.addAction(QgsAction.OpenUrl, "My Location",
+                  "'https://www.google.com/maps/search/?api=1&query=My+Location'", None, False)
 
 
 def add_basemap_layers(proj: QgsProject) -> None:
@@ -444,14 +408,10 @@ def main() -> None:
                 basemap_tree.setItemVisibilityChecked(False)
                 print("✅ OpenStreetMap layer set to hidden")
     
-    # Double-check all layers are visible
-    root = proj.layerTreeRoot()
-    for layer in root.children():
-        if hasattr(layer, 'setItemVisibilityChecked'):
-            layer.setItemVisibilityChecked(True)
-            print(f"✅ Layer '{layer.name() if hasattr(layer, 'name') else 'Unknown'}' set to visible")
-    
-    print("✅ All layers set to visible by default")
+    # Keep only Not Surveyed and basemaps visible by default
+    if not_surveyed_layer.isValid():
+        all_wells_tree.setItemVisibilityChecked(False)
+        print("✅ Only 'Not Surveyed' visible by default")
 
     # Set initial extent to Oklahoma
     oklahoma_extent = QgsRectangle(-103.002, 33.615, -94.430, 37.002)  # Oklahoma bbox

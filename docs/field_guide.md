@@ -27,8 +27,7 @@ Form shows well context at top:
 - Well name and operator
 
 Use big buttons to record your findings:
-- **Found the location?** Unknown / No / Yes
-- **Well physically exists?** Unknown / No / Yes  
+- **Well physically exists?**  No / Yes  
 - **Small leak detected?** No / Yes
 - **Viable for plugging?** No / Yes
 

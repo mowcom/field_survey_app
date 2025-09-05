@@ -116,10 +116,11 @@ def ensure_columns(df: pd.DataFrame) -> pd.DataFrame:
         if c not in df.columns:
             df[c] = pd.NA
 
-    # Status fields defaults
+    # Status fields defaults (align with app expectations)
     status_defaults = {
-        "well_status": -1,  # -1=Unknown, 0=Not Found, 1=Found
-        "small_leak": 0,    # 0=No, 1=Yes  
+        "found": -1,        # -1=Unknown, 0=No, 1=Yes (kept but hidden in UI)
+        "exists": -1,       # -1=Unknown, 0=No, 1=Yes (UI uses Yes/No only)
+        "small_leak": 0,    # 0=No, 1=Yes
         "viable_leak": 0,   # 0=No, 1=Yes
         "visited": 0,       # 0=Not Visited, 1=Visited
     }
@@ -156,7 +157,7 @@ def apply_triggers(conn: sqlite3.Connection) -> None:
         ON wells (visited);
         """
     )
-    # Insert trigger
+    # Insert trigger: set audit timestamps and visited when status changes
     cur.execute(
         """
         CREATE TRIGGER IF NOT EXISTS wells_insert
@@ -166,13 +167,15 @@ def apply_triggers(conn: sqlite3.Connection) -> None:
           UPDATE wells SET
             last_edit_utc = strftime('%Y-%m-%dT%H:%M:%fZ','now'),
             visited = CASE
-              WHEN (COALESCE(NEW.well_status, -1) != -1
+              WHEN (COALESCE(NEW.exists, -1) != -1
+                 OR COALESCE(NEW.found, -1) != -1
                  OR COALESCE(NEW.small_leak, 0) != 0
                  OR COALESCE(NEW.viable_leak, 0) != 0)
               THEN 1 ELSE COALESCE(NEW.visited, 0) END,
             visited_at_utc = CASE
               WHEN (COALESCE(NEW.visited, 0) = 0) AND (
-                   COALESCE(NEW.well_status, -1) != -1 OR
+                   COALESCE(NEW.exists, -1) != -1 OR
+                   COALESCE(NEW.found, -1) != -1 OR
                    COALESCE(NEW.small_leak, 0) != 0 OR COALESCE(NEW.viable_leak, 0) != 0)
               THEN strftime('%Y-%m-%dT%H:%M:%fZ','now')
               ELSE NEW.visited_at_utc END
@@ -180,7 +183,7 @@ def apply_triggers(conn: sqlite3.Connection) -> None:
         END;
         """
     )
-    # Update trigger
+    # Update trigger: same logic on update
     cur.execute(
         """
         CREATE TRIGGER IF NOT EXISTS wells_update
@@ -190,7 +193,8 @@ def apply_triggers(conn: sqlite3.Connection) -> None:
           UPDATE wells SET
             last_edit_utc = strftime('%Y-%m-%dT%H:%M:%fZ','now'),
             visited = CASE
-              WHEN (COALESCE(NEW.well_status, -1) != -1
+              WHEN (COALESCE(NEW.exists, -1) != -1
+                 OR COALESCE(NEW.found, -1) != -1
                  OR COALESCE(NEW.small_leak, 0) != 0
                  OR COALESCE(NEW.viable_leak, 0) != 0)
               THEN 1 ELSE COALESCE(NEW.visited, 0) END,
