@@ -18,6 +18,9 @@ __pycache__/
 *.aux.xml
 *.qmd
 
+# Build artifacts
+/dist/
+
 # OS / editor
 .DS_Store
 .idea/
@@ -27,4 +30,3 @@ __pycache__/
 /data/processed/
 /data/tmp/
 /data/cache/
-
