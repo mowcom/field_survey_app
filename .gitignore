@@ -1,0 +1,30 @@
+# Python / Conda
+.env
+.venv
+.envrc
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.mypy_cache/
+.pytype/
+
+# QGIS / data artifacts
+*.qgz
+*.qgs
+*.gpkg
+*.mbtiles
+*.tif
+*.log
+*.aux.xml
+*.qmd
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Data
+/data/processed/
+/data/tmp/
+/data/cache/
+

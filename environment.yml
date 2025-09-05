@@ -1,0 +1,16 @@
+name: field-app
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - geopandas
+  - shapely
+  - fiona
+  - pyproj
+  - pandas
+  - numpy
+  - gdal
+  - sqlite
+  - pip:
+      - qfieldcloud-sdk>=0.4.0
