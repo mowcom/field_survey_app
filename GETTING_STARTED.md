@@ -29,6 +29,11 @@ That's it! The single `deploy.py` command handles:
 - Building QGIS project with forms and styling
 - Uploading to QFieldCloud with timestamp updates
 
+First-time packaging (one-time per project):
+- In QFieldCloud web UI → Project → Files, set the uploaded `.qgz` as the Project File
+  - Dev: `wells_project_dev.qgz`; Prod: `wells_project.qgz`
+- Click Package and wait for success. Future deploys are automatic.
+
 ## Field Usage Workflow
 
 ### Mobile Setup
@@ -85,6 +90,10 @@ python test_repo.py
 python scripts/prepare_wells_gpkg.py
 python deploy.py --skip-build --env dev
 ```
+
+Packaging errors (invalid_job / 404 jobs//):
+- This means the Project File is not set yet in QFieldCloud UI.
+- Set the `.qgz` as the Project File under Files, click Package once, then re-download in QField.
 
 ## Support
 

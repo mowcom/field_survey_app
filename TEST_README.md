@@ -45,3 +45,4 @@ python deploy.py --env dev
 ## Adding Tests
 
 To add new tests, add functions to `test_repo.py` and include in `run_all_tests()` list.
+Note: Tests do not trigger QFieldCloud packaging. On first deploy per project, set the `.qgz` as the Project File in the QFieldCloud UI and click Package once.

@@ -20,6 +20,9 @@ python deploy.py --env prod
 
 That's it! `deploy.py` builds data + project and uploads to QFieldCloud.
 
+First-time packaging (one-time per project):
+- In QFieldCloud web UI → Project → Files, set the `.qgz` as the Project File (Dev: `wells_project_dev.qgz`, Prod: `wells_project.qgz`) and click Package once.
+
 ## Manual (if needed)
 ```bash
 # Build data only

@@ -133,7 +133,7 @@ def deploy_to_qfieldcloud(zip_path: Path, project_name: str):
                     show_progress=False
                 )
 
-        # Ensure the project file path is set so packaging knows which QGIS file to use
+        # Ensure the server-side Project File is set to our uploaded .qgz/.qgs (first-time init)
         project_file_name = None
         for f in qgis_dir.iterdir():
             if f.suffix.lower() in (".qgz", ".qgs"):
@@ -141,10 +141,21 @@ def deploy_to_qfieldcloud(zip_path: Path, project_name: str):
                 break
         if project_file_name:
             try:
-                client.patch_project(project_id, project_file_path=project_file_name)
-                print(f"✅ Set project file path to: {project_file_name}")
+                # 1) List files to find the uploaded project file id
+                files = client._request("GET", f"files/?project={project_id}").json()
+                file_id = None
+                for item in files:
+                    if item.get("name") == project_file_name:
+                        file_id = item.get("id")
+                        break
+                # 2) Patch the project to set project_file
+                if file_id:
+                    client._request("PATCH", f"projects/{project_id}/", json={"project_file": file_id})
+                    print(f"✅ Set Project File to: {project_file_name}")
+                else:
+                    print(f"⚠️  Could not find uploaded project file id for {project_file_name}")
             except Exception as e:
-                print(f"⚠️  Could not set project file path: {e}")
+                print(f"⚠️  Could not set Project File via API (will require UI once): {e}")
     
     # Trigger packaging
     print("Triggering project packaging...")

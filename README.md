@@ -16,6 +16,13 @@ python deploy.py --env dev
 python deploy.py --env prod
 ```
 
+First-time packaging (QFieldCloud UI):
+- After the first deploy for a project, open QFieldCloud → Project → Files.
+- Set the uploaded project file as the Project File:
+  - Dev: `wells_project_dev.qgz`
+  - Prod: `wells_project.qgz`
+- Click Package once and wait for success. Future deploys package automatically.
+
 ## What This System Provides
 
 - **Data**: ~22K wells from Oklahoma Corporation Commission (orphan + STFD)
@@ -30,4 +37,4 @@ python deploy.py --env prod
 - **Mobile App**: QField provides offline-capable survey forms with map navigation
 - **Data Sync**: QFieldCloud handles team collaboration and data preservation
 - **Field Guide**: `docs/field_guide.md` - Complete mobile workflow for field workers
- - **Environments**: `docs/dev_prod_environments.md` - Dev/Prod setup and packaging
+- **Environments**: `docs/dev_prod_environments.md` - Dev/Prod setup and packaging
