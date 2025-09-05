@@ -30,3 +30,4 @@ python deploy.py --env prod
 - **Mobile App**: QField provides offline-capable survey forms with map navigation
 - **Data Sync**: QFieldCloud handles team collaboration and data preservation
 - **Field Guide**: `docs/field_guide.md` - Complete mobile workflow for field workers
+ - **Environments**: `docs/dev_prod_environments.md` - Dev/Prod setup and packaging
