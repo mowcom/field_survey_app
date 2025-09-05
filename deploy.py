@@ -132,10 +132,26 @@ def deploy_to_qfieldcloud(zip_path: Path, project_name: str):
                     remote_path,
                     show_progress=False
                 )
+
+        # Ensure the project file path is set so packaging knows which QGIS file to use
+        project_file_name = None
+        for f in qgis_dir.iterdir():
+            if f.suffix.lower() in (".qgz", ".qgs"):
+                project_file_name = f.name
+                break
+        if project_file_name:
+            try:
+                client.patch_project(project_id, project_file_path=project_file_name)
+                print(f"✅ Set project file path to: {project_file_name}")
+            except Exception as e:
+                print(f"⚠️  Could not set project file path: {e}")
     
     # Trigger packaging
     print("Triggering project packaging...")
-    client.package_latest(project_id)
+    try:
+        client.package_latest(project_id)
+    except Exception as e:
+        print(f"⚠️  Packaging trigger via latest failed: {e}")
     
     # Bump the "Last changed" timestamp by updating description
     print("Updating project timestamp...")

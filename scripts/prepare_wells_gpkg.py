@@ -123,6 +123,7 @@ def ensure_columns(df: pd.DataFrame) -> pd.DataFrame:
         "small_leak": 0,    # 0=No, 1=Yes
         "viable_leak": 0,   # 0=No, 1=Yes
         "visited": 0,       # 0=Not Visited, 1=Visited
+        "reset_survey": 0,  # 0=No, 1=Yes (special toggle to clear to defaults)
     }
     for c, v in status_defaults.items():
         if c not in df.columns:
@@ -167,15 +168,15 @@ def apply_triggers(conn: sqlite3.Connection) -> None:
           UPDATE wells SET
             last_edit_utc = strftime('%Y-%m-%dT%H:%M:%fZ','now'),
             visited = CASE
-              WHEN (COALESCE(NEW.exists, -1) != -1
-                 OR COALESCE(NEW.found, -1) != -1
+              WHEN (COALESCE(NEW."exists", -1) != -1
+                 OR COALESCE(NEW."found", -1) != -1
                  OR COALESCE(NEW.small_leak, 0) != 0
                  OR COALESCE(NEW.viable_leak, 0) != 0)
               THEN 1 ELSE COALESCE(NEW.visited, 0) END,
             visited_at_utc = CASE
               WHEN (COALESCE(NEW.visited, 0) = 0) AND (
-                   COALESCE(NEW.exists, -1) != -1 OR
-                   COALESCE(NEW.found, -1) != -1 OR
+                   COALESCE(NEW."exists", -1) != -1 OR
+                   COALESCE(NEW."found", -1) != -1 OR
                    COALESCE(NEW.small_leak, 0) != 0 OR COALESCE(NEW.viable_leak, 0) != 0)
               THEN strftime('%Y-%m-%dT%H:%M:%fZ','now')
               ELSE NEW.visited_at_utc END
@@ -193,8 +194,8 @@ def apply_triggers(conn: sqlite3.Connection) -> None:
           UPDATE wells SET
             last_edit_utc = strftime('%Y-%m-%dT%H:%M:%fZ','now'),
             visited = CASE
-              WHEN (COALESCE(NEW.exists, -1) != -1
-                 OR COALESCE(NEW.found, -1) != -1
+              WHEN (COALESCE(NEW."exists", -1) != -1
+                 OR COALESCE(NEW."found", -1) != -1
                  OR COALESCE(NEW.small_leak, 0) != 0
                  OR COALESCE(NEW.viable_leak, 0) != 0)
               THEN 1 ELSE COALESCE(NEW.visited, 0) END,

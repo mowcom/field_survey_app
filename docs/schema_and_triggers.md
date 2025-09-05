@@ -25,8 +25,8 @@ Authoritative, offline-first schema for `wells.gpkg` and device-side rules.
   - Quarters: `quarter` TEXT, `quarter_quarter` TEXT, `quarter_q_q_q` TEXT, `quarter_q_q_q_q` TEXT
   - Footage: `footage_ns` TEXT, `ns` TEXT, `footage_ew` TEXT, `ew` TEXT
 - Field collection status (coded integers)
-  - `found` SMALLINT  (-1 Unknown, 0 No, 1 Yes)
-  - `exists` SMALLINT  (-1 Unknown, 0 No, 1 Yes)
+  - `found` SMALLINT  (-1 Unknown, 0 No, 1 Yes) [hidden in UI]
+  - `exists` SMALLINT  (-1 Unknown, 0 No, 1 Yes) [UI shows Yes/No only]
   - `small_leak` SMALLINT  (0 No, 1 Yes)
   - `viable_leak` SMALLINT  (0 No, 1 Yes)
   - `visited` SMALLINT  (0 Not Visited, 1 Visited)
@@ -43,6 +43,7 @@ Authoritative, offline-first schema for `wells.gpkg` and device-side rules.
 - Update `last_edit_utc` on every INSERT/UPDATE
 - If any status field deviates from default, force `visited = 1`
 - If `visited` flips 0→1 and `visited_at_utc` is NULL, set `visited_at_utc`
+- UI only exposes: `exists`, `small_leak`, `viable_leak`. `found` remains for compatibility but hidden.
 
 ## Trigger definitions (to be applied to the GeoPackage)
 Note: Stored here for reference; applied during build.
@@ -56,14 +57,14 @@ BEGIN
   UPDATE wells SET
     last_edit_utc = strftime('%Y-%m-%dT%H:%M:%fZ','now'),
     visited = CASE
-      WHEN (COALESCE(NEW.found, -1) != -1
-         OR COALESCE(NEW.exists, -1) != -1
+      WHEN (COALESCE(NEW."found", -1) != -1
+         OR COALESCE(NEW."exists", -1) != -1
          OR COALESCE(NEW.small_leak, 0) != 0
          OR COALESCE(NEW.viable_leak, 0) != 0)
       THEN 1 ELSE COALESCE(NEW.visited, 0) END,
     visited_at_utc = CASE
       WHEN (COALESCE(NEW.visited, 0) = 0) AND (
-           COALESCE(NEW.found, -1) != -1 OR COALESCE(NEW.exists, -1) != -1 OR
+           COALESCE(NEW."found", -1) != -1 OR COALESCE(NEW."exists", -1) != -1 OR
            COALESCE(NEW.small_leak, 0) != 0 OR COALESCE(NEW.viable_leak, 0) != 0)
       THEN strftime('%Y-%m-%dT%H:%M:%fZ','now')
       ELSE NEW.visited_at_utc END
@@ -78,8 +79,8 @@ BEGIN
   UPDATE wells SET
     last_edit_utc = strftime('%Y-%m-%dT%H:%M:%fZ','now'),
     visited = CASE
-      WHEN (COALESCE(NEW.found, -1) != -1
-         OR COALESCE(NEW.exists, -1) != -1
+      WHEN (COALESCE(NEW."found", -1) != -1
+         OR COALESCE(NEW."exists", -1) != -1
          OR COALESCE(NEW.small_leak, 0) != 0
          OR COALESCE(NEW.viable_leak, 0) != 0)
       THEN 1 ELSE COALESCE(NEW.visited, 0) END,

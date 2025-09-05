@@ -13,12 +13,12 @@ Core Commands
 - Deploy (prod): `python deploy.py --env prod`
 - Skip rebuild + deploy: `python deploy.py --skip-build --env dev`
 - Build data only: `python scripts/prepare_wells_gpkg.py`
-- Build QGIS project only: `python scripts/build_qgis_project.py --env dev`
+- Build QGIS project only: `/Applications/QGIS.app/Contents/MacOS/bin/python3 scripts/build_qgis_project.py --env dev`
 - Tests: `python test_repo.py`
 
 Assumptions
-- QGIS is installed when building the project via PyQGIS (macOS path is commonly `/Applications/QGIS.app/Contents/MacOS/bin/python3`).
-- No MapTiler integration is used; basemaps are OpenStreetMap + ESRI Satellite (online).
+- QGIS is installed when building the project via PyQGIS (macOS path is `/Applications/QGIS.app/Contents/MacOS/bin/python3`).
+- Basemaps are OpenStreetMap + Satellite (Google XYZ), no MapTiler.
 - GeoPackage audit/visited rules are handled by SQLite triggers (not QGIS defaults).
 
 Validation Flow (quick)
@@ -34,4 +34,5 @@ Troubleshooting
 
 Notes
 - Keep symbols simple: STFD=triangles, Orphan=circles; colors by well type (Gas blue, Oil orange, Other purple).
-- All layers/basemaps visible by default; no scale rules or labels.
+- Default view shows `Not Visited` (visited=0); no scale rules or labels.
+- Form exposes only: `exists`, `small_leak`, `viable_leak` (Yes/No).

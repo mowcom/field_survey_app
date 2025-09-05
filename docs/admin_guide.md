@@ -14,7 +14,7 @@ How to manage data, publish to QFieldCloud, and run monthly updates.
 - Republish the project to QFieldCloud.
 
 ## Basemaps
-- See `docs/mbtiles_plan.md` for preparing/refreshing MBTiles (OSM + NAIP).
+- Online basemaps only (Satellite + OpenStreetMap). Offline MBTiles are not used in this build.
 
 ## Project configuration
 - Forms, filters, and actions are specified in `docs/qgis_ui_spec.md`.

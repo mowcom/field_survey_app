@@ -9,36 +9,32 @@ export QFIELDCLOUD_USERNAME="<username>"
 export QFIELDCLOUD_PASSWORD="<password>"
 ```
 
-## Deploy Everything (Simple)
+## Deploy
 ```bash
-# Deploy to dev
+# Dev
 python deploy.py --env dev
 
-# Deploy to production  
+# Production  
 python deploy.py --env prod
 ```
 
-That's it! The deploy script handles:
-- Building GeoPackage from CSV data
-- Creating QGIS project with simple styling
-- Adding standard OSM + satellite basemaps
-- Uploading to QFieldCloud
-- Triggering project packaging
+That's it! `deploy.py` builds data + project and uploads to QFieldCloud.
 
-## Manual Steps (if needed)
+## Manual (if needed)
 ```bash
 # Build data only
 python scripts/prepare_wells_gpkg.py
 
 # Build project only
-python scripts/build_qgis_project.py --env dev
+/Applications/QGIS.app/Contents/MacOS/bin/python3 scripts/build_qgis_project.py --env dev
 
 # Deploy without rebuilding
 python deploy.py --skip-build --env dev
 ```
 
-## Styling Overview
-- **Single layer** with Gas/Oil/Other + STFD/Orphan categories
-- **Shape differentiation** - Pins for STFD, circles for Orphan
-- **Consistent colors** - Gas blue, Oil orange, Other purple across both shapes
-- **All layers visible by default** (no toggling required)
+## UI Overview
+- Edit only: Exists on site, Small leak, Viable for plugging (Yes/No)
+- Read-only context: County, Operator, Well type, Well name
+- Links: Lat, Lon and Google Maps Link
+- Layers: Not Visited visible by default; Surveyed/All Wells hidden
+- Basemaps: Satellite (visible) + OpenStreetMap (hidden)

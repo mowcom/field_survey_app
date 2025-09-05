@@ -5,18 +5,17 @@ Simple, offline-first workflow for surveying wells in Oklahoma.
 ## Before heading out
 - Open QField on the iPad/iPhone
 - Sync the project from QFieldCloud and download for offline use
-- App opens directly to Oklahoma with all wells visible
+- App opens to Oklahoma. Default view shows "Not Visited" wells.
 
 ## Understanding the map symbols
-- **STFD wells (priority)**: Map pins in blue (gas), orange (oil), purple (other)
-- **Orphan wells (baseline)**: Circles in blue (gas), orange (oil), purple (other)  
-- **Basemaps**: Street view and satellite imagery both available
-- **All symbols visible**: No need to toggle layers on/off
+- **STFD wells (priority)**: Triangles in blue (Gas), orange (Oil), purple (Other)
+- **Orphan wells (baseline)**: Circles in blue (Gas), orange (Oil), purple (Other)  
+- **Basemaps**: Satellite (Google) + OpenStreetMap (online)
 
 ## Well survey workflow (3 steps)
 
 ### Step 1: Navigate & Select
-- Use GPS and map to locate target well
+- Use GPS and map to locate target well (tap the Locate button on the map toolbar to recenter)
 - Tap the well symbol (pin or circle) on map
 - Form opens immediately
 
@@ -26,10 +25,12 @@ Form shows well context at top:
 - Source (STFD/ORPHAN)
 - Well name and operator
 
-Use big buttons to record your findings:
-- **Well physically exists?**  No / Yes  
-- **Small leak detected?** No / Yes
-- **Viable for plugging?** No / Yes
+Use big buttons to record your findings (Yes/No only):
+- **Exists on site**  No / Yes  
+- **Small leak** No / Yes
+- **Viable for plugging** No / Yes
+Below, view-only context appears: County, Operator, Well type, Well name.
+Copy helpers: Lat, Lon and Google Maps Link fields.
 
 ### Step 3: Save & continue
 - Tap Save (checkmark)
@@ -38,9 +39,10 @@ Use big buttons to record your findings:
 
 ## Navigation & team coordination
 From any well form:
-- **"Open in Google Maps"** → Get turn-by-turn directions
-- **"Share via WhatsApp"** → Send location to team
-- **"Apple Maps"** → Alternative navigation option
+- **Locate (QField toolbar)** → Recenter the map to your GPS location (map screen)
+- **Actions menu** → "Open in Google Maps (view)" or "(directions)"
+- **Share via WhatsApp** → Send location to team
+- **Apple Maps** → Alternative navigation option
 
 ## Working offline
 - Complete survey workflow works without cell/wifi

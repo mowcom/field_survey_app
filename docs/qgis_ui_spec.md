@@ -11,15 +11,14 @@ Defines forms, filters, actions, and styling for QField use.
 ## Form layout (Drag-and-Drop)
 - Header group (read-only): `well_id`, `source_list`, `well_name`, `operator_name`
 - Status group (big buttons):
-  - `found` (Value Map): -1 Unknown, 0 No, 1 Yes
-  - `exists` (Value Map): -1 Unknown, 0 No, 1 Yes
+  - `exists` (Value Map): 0 No, 1 Yes
   - `small_leak` (Value Map): 0 No, 1 Yes
   - `viable_leak` (Value Map): 0 No, 1 Yes
 - Optional group (collapsed): `notes`, `crew`, `photo_path` (if later added)
 
 ## Widget settings
-- Use Value Map (radio/button style on mobile) for status fields.
-- Disallow NULL where appropriate; defaults: found=-1, exists=-1, small_leak=0, viable_leak=0, visited=0.
+- Use Value Map (radio/button style on mobile) for the three fields with Yes/No options.
+- Disallow NULL where appropriate; defaults remain: found=-1, exists=-1, small_leak=0, viable_leak=0, visited=0 (UI hides `found` and does not expose Unknown).
 - Audit fields are managed by SQLite triggers; do not set QGIS default expressions for `last_edit_utc` or visited fields.
 
 ## Actions (feature menu)
@@ -61,18 +60,18 @@ Defines forms, filters, actions, and styling for QField use.
 
 ## Symbology
 - As per `docs/style_guide.md`:
-  - STFD wells: Triangle pins
+  - STFD wells: Triangles
   - Orphan wells: Circles
   - Colors by well type: Gas blue `#2196F3`, Oil orange `#FF9800`, Other purple `#9C27B0`
   - Layer order: STFD above Orphan
 
 ## Visibility
-- All layers visible by default; no scale-dependent rules
-- No labels (clean appearance)
+- Default view shows `Not Visited` (visited = 0) layer; `Wells` (all) is available but hidden by default.
+- No scale-dependent rules; no labels.
 
 ## Basemaps
 - OpenStreetMap (primary) as XYZ
-- ESRI Satellite (secondary) as XYZ
+- Satellite (Google XYZ) as secondary
 
 ## Filters and presets
 - Preset filter: Not Visited → `"visited" = 0`

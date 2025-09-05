@@ -38,15 +38,15 @@ That's it! The single `deploy.py` command handles:
 4. App opens to Oklahoma map with all wells visible
 
 ### Well Survey Process
-1. **Navigate** - Use map to locate target wells
-2. **Identify** - Triangles = STFD (priority), Circles = Orphan wells
-3. **Survey** - Tap well symbol → Fill out form → Save
-4. **Record** - System tracks: Found location, Well exists, Leak detection
-5. **Sync** - Upload collected data when back online
+1. Navigate – Use the map; tap the Locate button on the map toolbar to recenter to you.
+2. Identify – Triangles = STFD (priority), Circles = Orphan wells.
+3. Survey – Tap a well → Edit three fields → Save.
+4. Record – Exists on site, Small leak, Viable for plugging (Yes/No).
+5. Sync – Upload collected data when back online.
 
 ### Map Symbols
-- **STFD wells (priority)**: Triangle pins - blue (gas), orange (oil), purple (other)
-- **Orphan wells**: Circles - blue (gas), orange (oil), purple (other)
+- STFD wells (priority): Triangles — blue (Gas), orange (Oil), purple (Other)
+- Orphan wells: Circles — blue (Gas), orange (Oil), purple (Other)
 
 ## System Architecture
 
@@ -54,13 +54,13 @@ That's it! The single `deploy.py` command handles:
 - **Processing**: Python scripts convert CSV → GeoPackage with survey fields
 - **Mobile App**: QField provides offline-capable form-based data collection
 - **Sync**: QFieldCloud handles data synchronization and team collaboration
-- **Forms**: Mobile-optimized survey forms with GPS integration
+- Forms: Mobile-optimized survey form with only Exists on site / Small leak / Viable for plugging
 
 ## File Structure
 
 ```
 field_app/
-├── deploy.py              # Single deployment script
+├── deploy.py              # Single deployment script (build + upload)
 ├── data/raw/              # Place OCC CSV files here  
 ├── qgis/                  # Generated projects and data
 ├── scripts/               # Data processing utilities

@@ -14,9 +14,11 @@ from qgis.core import (
     QgsMarkerSymbol, QgsEditorWidgetSetup, QgsProperty, QgsDefaultValue,
     QgsLayerTreeGroup, QgsCoordinateReferenceSystem, QgsReferencedRectangle,
     QgsAction, QgsActionManager, QgsRectangle, QgsFieldConstraints,
-    QgsAttributeEditorContainer, QgsAttributeEditorField, QgsEditFormConfig
+    QgsAttributeEditorContainer, QgsAttributeEditorField, QgsEditFormConfig,
+    QgsField
 )
 from PyQt5.QtGui import QColor
+from PyQt5.QtCore import QVariant
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
 QGIS_DIR = os.path.join(PROJECT_ROOT, "qgis")
@@ -73,16 +75,33 @@ def build_renderer(layer: QgsVectorLayer) -> QgsCategorizedSymbolRenderer:
     expression = "concat(\"well_type\", '_', \"source_list\")"
     return QgsCategorizedSymbolRenderer(expression, categories)
 
+def add_virtual_fields(layer: QgsVectorLayer) -> None:
+    """Add useful virtual fields (not persisted) for copy/share in QField."""
+    fields = layer.fields()
+    def ensure_expr_field(name: str, expr: str):
+        if fields.indexOf(name) == -1:
+            layer.addExpressionField(expr, QgsField(name, QVariant.String))
+    # Google Maps view URL and lat,lon string
+    expr_lat = "y(transform($geometry, layer_property(@layer,'crs'), 'EPSG:4326'))"
+    expr_lon = "x(transform($geometry, layer_property(@layer,'crs'), 'EPSG:4326'))"
+    ensure_expr_field("gmaps_url", f"concat('https://maps.google.com/?q=', {expr_lat}, ',', {expr_lon})")
+    ensure_expr_field("coords_latlon", f"concat({expr_lat}, ',', {expr_lon})")
+
 
 def apply_value_maps(layer: QgsVectorLayer) -> None:
     """Configure simple Yes/No widgets and hide non-editable fields"""
     fields = layer.fields()
 
-    def set_value_map(field_name: str, mapping):
+    def set_value_map_yn(field_name: str):
         idx = fields.indexOf(field_name)
         if idx == -1:
             return
-        cfg = {"map": [{"value": v, "label": label} for v, label in mapping], "style": "radio"}
+        cfg = {
+            "map": {"No": 0, "Yes": 1},
+            "AllowNull": False,
+            "UseCompleter": False,
+            "UseRepresentedValue": False
+        }
         layer.setEditorWidgetSetup(idx, QgsEditorWidgetSetup("ValueMap", cfg))
 
     def set_read_only(field_name: str):
@@ -95,25 +114,53 @@ def apply_value_maps(layer: QgsVectorLayer) -> None:
         if idx != -1:
             layer.setEditorWidgetSetup(idx, QgsEditorWidgetSetup("Hidden", {}))
 
-    # Editable survey fields: Yes/No only
-    yn = [(0, "No"), (1, "Yes")]
-    set_value_map("exists", yn)
-    set_value_map("small_leak", yn)
-    set_value_map("viable_leak", yn)
+    # Editable survey fields: Yes/No only (ValueMap)
+    set_value_map_yn("exists")
+    set_value_map_yn("small_leak")
+    set_value_map_yn("viable_leak")
 
-    # Hide 'found' (kept for compatibility but not used)
-    set_hidden("found")
+    # Show a few helpful read-only fields below the toggles
+    context_fields = {"county_name", "operator_name", "well_type", "well_name", "coords_latlon", "gmaps_url"}
+    editable_fields = {"exists", "small_leak", "viable_leak", "reset_survey"}
 
-    # System fields read-only
-    for f in ("visited", "visited_at_utc", "last_edit_utc"):
-        set_read_only(f)
+    for i in range(fields.count()):
+        name = fields.at(i).name()
+        if name in editable_fields:
+            continue
+        elif name in context_fields:
+            set_read_only(name)
+        else:
+            set_hidden(name)
 
-    # Context (keep read-only; QField form can still show basic ID info)
-    for f in ("well_id", "source_list", "well_name", "operator_name"):
-        set_read_only(f)
+    # Set friendly field aliases
+    alias_map = {
+        "exists": "Exists on site",
+        "small_leak": "Small leak",
+        "viable_leak": "Viable for plugging",
+        "county_name": "County",
+        "operator_name": "Operator",
+        "well_type": "Well type",
+        "well_name": "Well name",
+        "coords_latlon": "Lat, Lon",
+        "gmaps_url": "Google Maps Link",
+    }
+    for fname, alias in alias_map.items():
+        idx = fields.indexOf(fname)
+        if idx != -1:
+            layer.setFieldAlias(idx, alias)
 
-    # Ensure no default expressions for audit fields (triggers manage them)
-    print("✅ Widgets: exists/small_leak/viable_leak as Yes/No; others hidden/read-only")
+    # Reset survey helper toggle
+    set_value_map_yn("reset_survey")
+
+    print("✅ Widgets & aliases set; context + link fields shown read-only; others hidden; reset toggle added")
+
+    # Ensure visited flips to 1 on any change client-side for immediate UI update
+    v_idx = fields.indexOf("visited")
+    if v_idx != -1:
+        expr = "case when coalesce(\"exists\", -1) != -1 or coalesce(\"small_leak\",0) != 0 or coalesce(\"viable_leak\",0) != 0 then 1 else coalesce(\"visited\",0) end"
+        layer.setDefaultValueDefinition(v_idx, QgsDefaultValue(expr, True))
+        # Also make visited read-only/hidden in form
+        set_hidden("visited")
 
 
 def configure_survey_form(layer: QgsVectorLayer) -> None:
@@ -181,14 +228,19 @@ def configure_mobile_survey_form(layer: QgsVectorLayer) -> None:
     form_config = layer.editFormConfig()
     form_config.setLayout(QgsEditFormConfig.GeneratedLayout)
 
+    # Add virtual fields used in the form
+    add_virtual_fields(layer)
+    # Refresh fields after virtual additions
+    fields = layer.fields()
+
     # Apply widgets and suppression
     apply_value_maps(layer)
 
-    # Order: exists, small_leak, viable_leak
+    # Order: exists, small_leak, viable_leak, then helpful read-only fields
     try:
         from qgis.core import QgsAttributeEditorContainer, QgsAttributeEditorField
         root = QgsAttributeEditorContainer("Survey", None)
-        for fname in ("exists", "small_leak", "viable_leak"):
+        for fname in ("exists", "small_leak", "viable_leak", "reset_survey", "county_name", "operator_name", "well_type", "well_name", "coords_latlon", "gmaps_url"):
             idx = fields.indexOf(fname)
             if idx != -1:
                 root.addChildElement(QgsAttributeEditorField(fname, idx, root))
@@ -291,8 +343,10 @@ def add_actions(layer: QgsVectorLayer) -> None:
     for act in list(mgr.actions()):
         if act.name() in ("Open in Google Maps", "Share via WhatsApp", "Open in Apple Maps", "My Location"):
             mgr.removeAction(act)
-    mgr.addAction(QgsAction.OpenUrl, "Open in Google Maps",
+    mgr.addAction(QgsAction.OpenUrl, "Open in Google Maps (directions)",
                   "concat('https://www.google.com/maps/dir/?api=1&destination=', y(transform($geometry, layer_property(@layer,'crs'), 'EPSG:4326')), ',', x(transform($geometry, layer_property(@layer,'crs'), 'EPSG:4326')))", None, False)
+    mgr.addAction(QgsAction.OpenUrl, "Open in Google Maps (view)",
+                  "concat('https://maps.google.com/?q=', y(transform($geometry, layer_property(@layer,'crs'), 'EPSG:4326')), ',', x(transform($geometry, layer_property(@layer,'crs'), 'EPSG:4326')))", None, False)
     mgr.addAction(QgsAction.OpenUrl, "Share via WhatsApp",
                   "concat('https://wa.me/?text=', url_encode(concat('Well ', \"well_id\", ' — https://maps.google.com/?q=', y(transform($geometry, layer_property(@layer,'crs'), 'EPSG:4326')), ',', x(transform($geometry, layer_property(@layer,'crs'), 'EPSG:4326')))))", None, False)
     mgr.addAction(QgsAction.OpenUrl, "Open in Apple Maps",
@@ -307,7 +361,7 @@ def add_basemap_layers(proj: QgsProject) -> None:
     
     # Satellite basemap: Simplified Google Satellite (bottom layer)
     satellite_uri = "type=xyz&url=https://mt1.google.com/vt/lyrs%3Ds%26x%3D{x}%26y%3D{y}%26z%3D{z}&zmax=19&zmin=0&http-header:User-Agent=QField"
-    satellite_layer = QgsRasterLayer(satellite_uri, "Satellite", "wms") 
+    satellite_layer = QgsRasterLayer(satellite_uri, "Satellite (Google)", "wms") 
     if satellite_layer.isValid():
         proj.addMapLayer(satellite_layer, False)
         print("✅ Added Satellite basemap")
@@ -372,15 +426,25 @@ def main() -> None:
     # Add wells layer to project (will render above basemaps)
     proj.addMapLayer(wells, False)
     
-    # Create filtered layer view for "Not Surveyed" wells
+    # Create filtered layer view for "Not Visited" wells
     not_surveyed_uri = f'{gpkg}|layername={LAYER_NAME}|subset="visited" = 0'
-    not_surveyed_layer = QgsVectorLayer(not_surveyed_uri, "Not Surveyed", "ogr")
+    not_surveyed_layer = QgsVectorLayer(not_surveyed_uri, "Not Visited", "ogr")
     if not_surveyed_layer.isValid():
         not_surveyed_layer.setRenderer(build_renderer(not_surveyed_layer))
         configure_mobile_survey_form(not_surveyed_layer)
         add_actions(not_surveyed_layer)
         proj.addMapLayer(not_surveyed_layer, False)
-        print("✅ Added 'Not Surveyed' filtered layer")
+        print("✅ Added 'Not Visited' filtered layer")
+
+    # Create filtered layer view for "Surveyed" wells
+    surveyed_uri = f'{gpkg}|layername={LAYER_NAME}|subset="visited" = 1'
+    surveyed_layer = QgsVectorLayer(surveyed_uri, "Surveyed", "ogr")
+    if surveyed_layer.isValid():
+        surveyed_layer.setRenderer(build_renderer(surveyed_layer))
+        configure_mobile_survey_form(surveyed_layer)
+        add_actions(surveyed_layer)
+        proj.addMapLayer(surveyed_layer, False)
+        print("✅ Added 'Surveyed' filtered layer")
     
     # Organize layers in simple tree structure
     root = proj.layerTreeRoot()
@@ -389,29 +453,34 @@ def main() -> None:
     if not_surveyed_layer.isValid():
         not_surveyed_tree = root.addLayer(not_surveyed_layer)
         not_surveyed_tree.setItemVisibilityChecked(True)
-        print("✅ 'Not Surveyed' layer set to visible")
-    
-    # Add all wells layer for reference (hidden by default)
+        print("✅ 'Not Visited' layer set to visible")
+
+    # Add surveyed and all wells layers for reference (hidden by default)
+    if 'surveyed_layer' in locals() and surveyed_layer.isValid():
+        surveyed_tree = root.addLayer(surveyed_layer)
+        surveyed_tree.setItemVisibilityChecked(False)
+        print("✅ 'Surveyed' layer added (hidden by default)")
+
     all_wells_tree = root.addLayer(wells)
     all_wells_tree.setItemVisibilityChecked(False)
     print("✅ 'Wells' layer added (hidden by default)")
     
     # Add basemap layers to tree (will render at bottom)
     for layer in proj.mapLayers().values():
-        if layer.name() in ["Satellite", "OpenStreetMap"]:
+        if layer.name() in ["Satellite (Google)", "OpenStreetMap"]:
             basemap_tree = root.addLayer(layer)
             # Set satellite visible by default, OSM hidden
-            if layer.name() == "Satellite":
+            if layer.name() == "Satellite (Google)":
                 basemap_tree.setItemVisibilityChecked(True)
                 print("✅ Satellite layer set to visible")
             else:
                 basemap_tree.setItemVisibilityChecked(False)
                 print("✅ OpenStreetMap layer set to hidden")
     
-    # Keep only Not Surveyed and basemaps visible by default
+    # Keep only Not Visited and basemaps visible by default
     if not_surveyed_layer.isValid():
         all_wells_tree.setItemVisibilityChecked(False)
-        print("✅ Only 'Not Surveyed' visible by default")
+        print("✅ Only 'Not Visited' visible by default")
 
     # Set initial extent to Oklahoma
     oklahoma_extent = QgsRectangle(-103.002, 33.615, -94.430, 37.002)  # Oklahoma bbox

@@ -24,15 +24,15 @@ Simple, consistent symbology for thousands of wells on iPad/iPhone.
 - Oil (ORPHAN) - Orange circle
 - Other (ORPHAN) - Purple circle
 
-## Visibility
-- All layers visible by default (no toggling required)
-- No scale-dependent visibility (simplified)
-- No labels (clean appearance)
+- ## Visibility
+- Default view shows only `Not Visited` (visited = 0)
+- `Wells` (all) is available but hidden by default
+- No scale-dependent visibility; no labels
 
 ## Basemaps
 - OpenStreetMap (primary)
-- ESRI Satellite imagery (secondary)
-- Both visible by default
+- Satellite (Google XYZ) as secondary
+- Both included; Satellite visible by default
 
 ## Default view
 - Initial extent: Oklahoma bounding box
